@@ -10,18 +10,46 @@
 
 #include <unistd.h>
 
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-};
-
 const std::vector<uint16_t> indices = {
     0, 1, 2, 2, 3, 0
 };
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
+float convertPxToFl(int px, int dim)
+{
+    float fPx = (float) px;
+    float fDim = (float) dim;
+
+    return (fPx / (fDim / 2)) - 1;
+}
+
+float convertColor(int c)
+{
+    float fC = (float) c;
+    return fC / 255;
+}
+
+std::vector<Vertex> calculateVertices(Rect rect)
+{
+
+    float w = convertPxToFl(rect.width, 800) + 1;
+    float h = convertPxToFl(rect.height, 800) + 1;
+    float x = convertPxToFl(rect.offset.x, 800);
+    float y = convertPxToFl(rect.offset.y, 800);
+    float r = convertColor(rect.color.r);
+    float g = convertColor(rect.color.g);
+    float b = convertColor(rect.color.b);
+    float a = convertColor(rect.color.a);
+
+    std::vector<Vertex> vertices;
+    vertices.push_back({{x, y}, {r, g, b}});
+    vertices.push_back({{x + w, y}, {r, g, b}});
+    vertices.push_back({{x + w, y + h}, {r, g, b}});
+    vertices.push_back({{x, y + h}, {r, g, b}});
+
+    return vertices;
+}
 
 VkVertexInputBindingDescription Vertex::getBindingDescription()
 {
@@ -641,6 +669,23 @@ void Window::createFramebuffers()
 
 void Window::createVertexBuffer()
 {
+    Rect rect;
+    rect.offset.x = width / 4;
+    rect.offset.y = height / 4;
+    rect.width = width / 2;
+    rect.height = height / 2;
+    rect.color.r = 255;
+    rect.color.g = 0;
+    rect.color.b = 0;
+    rect.color.a = 255;
+
+    auto vertices = calculateVertices(rect);
+
+    for (Vertex vertex : vertices)
+    {
+        std::cout << vertex.pos.x << ", " << vertex.pos.y << " - " << vertex.color.r << ", " << vertex.color.b << ", " << vertex.color.g << std::endl;
+    }
+
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     VkBuffer stagingBuffer;

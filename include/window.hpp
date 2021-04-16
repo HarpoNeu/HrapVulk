@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <device.hpp>
+#include <rect.hpp>
 
 struct Swapchain
 {

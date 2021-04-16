@@ -4,6 +4,9 @@
 #include <stdexcept>
 #include <vector>
 
+const int WIDTH = 800;
+const int HEIGHT = 800;
+
 class TestApp : public Application
 {
 public:
@@ -12,7 +15,7 @@ protected:
 
     virtual void start(Window& primaryWindow)
     {
-        primaryWindow.setSize(800, 800);
+        primaryWindow.setSize(WIDTH, HEIGHT);
         primaryWindow.setTitle("Title");
 
         primaryWindow.show();
