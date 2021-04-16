@@ -95,7 +95,7 @@ public:
      */ 
     void hide();
 
-    void launch(std::vector<Device> devices);
+    void launch(std::vector<Device>& devices);
 
     void drawFrame();
 

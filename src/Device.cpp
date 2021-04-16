@@ -13,7 +13,7 @@ const std::vector<const char*> requestedDeviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-std::vector<QueueFamily> getPhysicalDeviceQueueFamilies(VkPhysicalDevice physicalDevice)
+std::vector<QueueFamily> getPhysicalDeviceQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR& surface)
 {
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -79,6 +79,17 @@ std::vector<QueueFamily> getPhysicalDeviceQueueFamilies(VkPhysicalDevice physica
 
             if (requestedUse > maxAvailableUse && queueFamilies[j].queueFlags & queueFlag)
             {
+                if ((queueFlag & VK_QUEUE_GRAPHICS_BIT) == queueFlag)
+                {
+                    VkBool32 presentSupport;
+                    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, j, surface, &presentSupport);
+
+                    if (presentSupport != VK_TRUE)
+                    {
+                        continue;
+                    }
+                }
+
                 maxAvailableUse = requestedUse;
                 queueFamilyToUse = j;
             }
@@ -124,9 +135,36 @@ bool deviceExtensionsSupported(VkPhysicalDevice device)
     return requiredExtensions.empty();
 }
 
-int rateDevice(VkPhysicalDevice device)
+SwapchainSupportDetails querySwapchainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR& surface)
 {
-    auto queueFamilies = getPhysicalDeviceQueueFamilies(device);
+    SwapchainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+    if (formatCount != 0)
+    {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+    }
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+
+    if (presentModeCount != 0)
+    {
+        details.presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+    }
+
+    return details;
+}
+
+int rateDevice(VkPhysicalDevice device, VkSurfaceKHR& surface)
+{
+    auto queueFamilies = getPhysicalDeviceQueueFamilies(device, surface);
     bool extensionsSupported = deviceExtensionsSupported(device);
 
     int rating = 0;
@@ -144,11 +182,19 @@ int rateDevice(VkPhysicalDevice device)
     {
         rating = -1;
     }
+    else
+    {
+        SwapchainSupportDetails swapchainDetails = querySwapchainSupportDetails(device, surface);
+        if (swapchainDetails.formats.empty() || swapchainDetails.presentModes.empty())
+        {
+            rating = -1;
+        }
+    }
 
     return rating;
 }
 
-VkPhysicalDevice selectPhysicalDevice()
+VkPhysicalDevice selectPhysicalDevice(VkSurfaceKHR& surface)
 {
     uint32_t physicalDeviceCount = 0;
     vkEnumeratePhysicalDevices(getInstance(), &physicalDeviceCount, nullptr);
@@ -165,7 +211,7 @@ VkPhysicalDevice selectPhysicalDevice()
     int bestRating = -1;
     for (const auto& physicalDevice : physicalDevices)
     {
-        int deviceRating = rateDevice(physicalDevice);
+        int deviceRating = rateDevice(physicalDevice, surface);
         if (deviceRating > bestRating)
         {
             bestDevice = physicalDevice;
@@ -186,15 +232,17 @@ Device::~Device()
 
 }
 
-void Device::create()
+void Device::create(VkSurfaceKHR& surface)
 {
     const std::vector<const char*> debugLayers {
         "VK_LAYER_KHRONOS_validation"
     };
 
-    physicalDevice = selectPhysicalDevice();
+    physicalDevice = selectPhysicalDevice(surface);
 
-    auto queueFamilies = getPhysicalDeviceQueueFamilies(physicalDevice);
+    here();
+
+    auto queueFamilies = getPhysicalDeviceQueueFamilies(physicalDevice, surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::map<uint32_t, uint32_t> uniqueQueueFamilies;
@@ -280,6 +328,35 @@ VkResult Device::createBuffer(VkBufferCreateInfo* pCreateInfo, VkAllocationCallb
     return vkCreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 }
 
+void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory)
+{
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.size = size;
+    bufferCreateInfo.usage = usage;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (createBuffer(&bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Error! Failed to create buffer!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    getBufferMemoryRequirements(buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+    if (allocateMemory(&allocInfo, nullptr, &memory) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Error! Failed to allocate buffer memory!");
+    }
+
+    bindBufferMemory(buffer, memory, 0);
+}
+
 VkResult Device::createCommandPool(VkCommandPoolCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkCommandPool* pPool)
 {
     return vkCreateCommandPool(device, pCreateInfo, pAllocator, pPool);
@@ -355,6 +432,19 @@ void Device::freeCommandBuffers(VkCommandPool pool, uint32_t bufferCount, VkComm
     vkFreeCommandBuffers(device, pool, bufferCount, pBuffers);
 }
 
+void Device::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool pool, VkQueue queue)
+{
+    VkCommandBuffer commandBuffer = beginSingleTimeCommands(pool);
+
+    VkBufferCopy copyRegion = {};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    endSingleTimeCommands(commandBuffer, pool, queue);
+}
+
 void Device::destroyBuffer(VkBuffer buffer, VkAllocationCallbacks* pAllocator)
 {
     vkDestroyBuffer(device, buffer, pAllocator);
@@ -420,6 +510,41 @@ void Device::unmapMemory(VkDeviceMemory memory)
     vkUnmapMemory(device, memory);
 }
 
+VkCommandBuffer Device::beginSingleTimeCommands(VkCommandPool pool)
+{
+    VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
+    commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAllocInfo.commandPool = pool;
+    commandBufferAllocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    allocateCommandBuffers(&commandBufferAllocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+
+    return commandBuffer;
+}
+
+void Device::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool pool, VkQueue queue)
+{
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(queue);
+
+    freeCommandBuffers(pool, 1, &commandBuffer);
+}
+
 VkResult Device::waitForFences(uint32_t fenceCount, VkFence* pFences, VkBool32 waitAll, uint64_t timeout)
 {
     return vkWaitForFences(device, fenceCount, pFences, waitAll, timeout);
@@ -433,6 +558,11 @@ VkResult Device::resetFences(uint32_t fenceCount, VkFence* pFences)
 VkResult Device::waitIdle()
 {
     return vkDeviceWaitIdle(device);
+}
+
+int Device::getRating(VkSurfaceKHR& surface)
+{
+    return rateDevice(physicalDevice, surface);
 }
 
 void Device::getBufferMemoryRequirements(VkBuffer buffer, VkMemoryRequirements* pRequirements)
@@ -450,9 +580,9 @@ VkResult Device::getSwapchainImages(VkSwapchainKHR swapchain, uint32_t* pSwapcha
     return vkGetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
 }
 
-std::vector<QueueFamily> Device::getQueueFamilies()
+std::vector<QueueFamily> Device::getQueueFamilies(VkSurfaceKHR& surface)
 {
-    auto queueFamilies = getPhysicalDeviceQueueFamilies(physicalDevice);
+    auto queueFamilies = getPhysicalDeviceQueueFamilies(physicalDevice, surface);
     return queueFamilies;
 }
 
@@ -465,29 +595,7 @@ VkBool32 Device::getPhysicalDeviceSurfaceSupport(VkSurfaceKHR& surface)
 
 SwapchainSupportDetails Device::getSwapchainSupportDetails(VkSurfaceKHR& surface)
 {
-    SwapchainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-
-    if (formatCount != 0)
-    {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
-
-    if (presentModeCount != 0)
-    {
-        details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, details.presentModes.data());
-    }
-
-    return details;
+    return querySwapchainSupportDetails(physicalDevice, surface);
 }
 
 std::vector<Queue>& Device::getGraphicsQueues()
@@ -500,6 +608,22 @@ VkCommandPool Device::getCommandPool(Queue queue)
     uint32_t queueFamily = queue.family.queueFamilyIndex;
     VkCommandPool pool = commandPools.find(queueFamily)->second;
     return pool;
+}
+
+uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    getPhysicalDeviceMemoryProperties(&memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+    {
+        if (typeFilter & (i << 1) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("Error! Failed to find suitable memory type!");
 }
 
 VkResult Device::acquireNextImageKHR(VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex)

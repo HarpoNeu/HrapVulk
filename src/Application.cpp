@@ -8,7 +8,6 @@
 
 VkInstance instance;
 VkDebugUtilsMessengerEXT debugMessenger;
-Device device;
 
 /*! @brief Checks that requested validation layers are present on the system.
  *
@@ -144,11 +143,6 @@ VkInstance getInstance()
     return instance;
 }
 
-Device& getDevice()
-{
-    return device;
-}
-
 /*! @brief Implementation of default constructor for 'Application' class.
  *
  */
@@ -177,7 +171,10 @@ Application::~Application()
         window.destroy();
     }
 
-    device.destroy();
+    for (Device device : devices)
+    {
+        device.destroy();
+    }
 
     //destroy debugMessenger
     destroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
@@ -194,7 +191,6 @@ Application::~Application()
 void Application::run()
 {
     createInstance();
-    device.create();
 
     start(windows[0]);
 
@@ -209,6 +205,4 @@ void Application::run()
             window.drawFrame();
         }
     }
-
-    getDevice().waitIdle();
 }

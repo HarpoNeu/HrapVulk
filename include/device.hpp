@@ -32,9 +32,10 @@ public:
     Device();
     ~Device();
 
-    void create();
+    void create(VkSurfaceKHR& surface);
     void destroy();
 
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
     VkResult createBuffer(VkBufferCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer);
     VkResult createCommandPool(VkCommandPoolCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkCommandPool* pPool);
     VkResult createFence(VkFenceCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkFence* pFence);
@@ -54,6 +55,8 @@ public:
     VkResult allocateCommandBuffers(VkCommandBufferAllocateInfo* pAllocInfo, VkCommandBuffer* pBuffers);
     void freeCommandBuffers(VkCommandPool pool, uint32_t bufferCount, VkCommandBuffer* pBuffers);
 
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool pool, VkQueue queue);
+
     void destroyBuffer(VkBuffer buffer, VkAllocationCallbacks* pAllocator);
     void destroyCommandPool(VkCommandPool pool, VkAllocationCallbacks* pAllocator);
     void destroyFence(VkFence fence, VkAllocationCallbacks* pAllocator);
@@ -69,21 +72,29 @@ public:
     VkResult mapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData);
     void unmapMemory(VkDeviceMemory memory);
 
+    VkCommandBuffer beginSingleTimeCommands(VkCommandPool pool);
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool pool, VkQueue queue);
+
     VkResult waitForFences(uint32_t fenceCount, VkFence* pFences, VkBool32 waitAll, uint64_t timeout);
     VkResult resetFences(uint32_t fenceCount, VkFence* pFences);
 
     VkResult waitIdle();
+
+    int getRating(VkSurfaceKHR& surface);
 
     void getBufferMemoryRequirements(VkBuffer buffer, VkMemoryRequirements* pRequirements);
     void getPhysicalDeviceMemoryProperties(VkPhysicalDeviceMemoryProperties* pProperties);
 
     VkResult getSwapchainImages(VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages);
 
-    std::vector<QueueFamily> getQueueFamilies();
+    std::vector<QueueFamily> getQueueFamilies(VkSurfaceKHR& surface);
     VkBool32 getPhysicalDeviceSurfaceSupport(VkSurfaceKHR& surface);
     SwapchainSupportDetails getSwapchainSupportDetails(VkSurfaceKHR& surface);
     std::vector<Queue>& getGraphicsQueues();
     VkCommandPool getCommandPool(Queue queue);
+
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
     VkResult acquireNextImageKHR(VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex);
 
 protected:
