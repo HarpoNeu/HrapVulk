@@ -45,8 +45,8 @@ TFLAGS := \
 test: clean app
 	$(TFLAGS) ./$(APP_DST)
 
-memcheck: 
-	$(TFLAGS) valgrind --leak-check=yes $(APP_DST)
+memcheck: clean app
+	$(TFLAGS) valgrind --leak-check=yes $(APP_DST) > log.txt 2>&1
 
 clean:
 	rm -f $(DIR_OBJ)/*.o
