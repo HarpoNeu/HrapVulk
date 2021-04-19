@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <device.hpp>
-#include <rect.hpp>
+#include <shape.hpp>
 
 struct Swapchain
 {
@@ -95,6 +95,8 @@ public:
      */
     void destroy();
 
+    void addShape(Shape* shape);
+
     /*! @brief Returns whether the specified window should close.
      *
      * @returns 'true' if window should close, 'false' otherwise.
@@ -124,8 +126,8 @@ private:
     std::vector<VkBuffer> vertexBuffers;
     std::vector<VkDeviceMemory> vertexBufferMemories;
 
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
+    std::vector<VkBuffer> indexBuffers;
+    std::vector<VkDeviceMemory> indexBufferMemories;
 
     Dimensions dimensions;
     char* title;
@@ -135,7 +137,7 @@ private:
 
     size_t currentFrame;
 
-    std::vector<Rect> rects;
+    std::vector<Shape*> shapes;
 
     void createSwapchain();
     void createRenderPass();

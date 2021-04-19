@@ -224,13 +224,19 @@ void Window::destroy()
     {
         device.freeMemory(memory, nullptr);
     }
-    device.freeMemory(indexBufferMemory, nullptr);
+    for (VkDeviceMemory memory : indexBufferMemories)
+    {
+        device.freeMemory(memory, nullptr);
+    }
 
     for (VkBuffer buffer : vertexBuffers)
     {
         device.destroyBuffer(buffer, nullptr);
     }
-    device.destroyBuffer(indexBuffer, nullptr);
+    for (VkBuffer buffer : indexBuffers)
+    {
+        device.destroyBuffer(buffer, nullptr);
+    }
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -243,6 +249,11 @@ void Window::destroy()
 
     glfwDestroyWindow(window);
     window = nullptr;
+}
+
+void Window::addShape(Shape* shape)
+{
+    shapes.push_back(shape);
 }
 
 bool Window::shouldClose()
@@ -607,28 +618,22 @@ void Window::createFramebuffers()
 
 void Window::createVertexBuffer()
 {
-    rects.resize(2);
+    vertexBuffers.resize(shapes.size());
+    vertexBufferMemories.resize(shapes.size());
 
-    rects[0].dimensions.w = dimensions.w / 6;
-    rects[0].dimensions.h = dimensions.h / 6;
-    rects[0].offset.x = dimensions.w / 4;
-    rects[0].offset.y = dimensions.h / 4;
-
-    rects[0].color = {255, 0, 0, 1};
-
-    rects[1].dimensions.w = dimensions.w / 6;
-    rects[1].dimensions.h = dimensions.h / 6;
-    rects[1].offset.x = (dimensions.w / 4) * 3;
-    rects[1].offset.y = (dimensions.h / 4) * 3;
-
-    rects[1].color = {0, 0, 255, 1};
-
-    vertexBuffers.resize(rects.size());
-    vertexBufferMemories.resize(rects.size());
-
-    for (size_t i = 0; i < rects.size(); i++)
+    for (size_t i = 0; i < shapes.size(); i++)
     {
-        auto vertices = rects[i].getVertices(dimensions);
+        std::vector<Vertex> vertices;
+
+        switch(shapes[i]->getType())
+        {
+            case SHAPE_TYPE_RECT:
+                vertices = Rect::getVertices(static_cast<Rect*>(shapes[i]), dimensions);
+                break;
+            default:
+                vertices = {};
+                break;
+        }
 
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -655,28 +660,44 @@ void Window::createVertexBuffer()
 
 void Window::createIndexBuffer()
 {
-    auto indices = Rect::getIndices();
+    indexBuffers.resize(shapes.size());
+    indexBufferMemories.resize(shapes.size());
 
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    for (size_t i = 0; i < shapes.size(); i++)
+    {
+        std::vector<uint16_t> indices;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+        switch(shapes[i]->getType())
+        {
+            case SHAPE_TYPE_RECT:
+                indices = Rect::getIndices();
+                break;
+            default:
+                indices = {};
+                break;
+        }
 
-    device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
-    void* data;
-    device.mapMemory(stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t) bufferSize);
-    device.unmapMemory(stagingBufferMemory);
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
 
-    Queue queue = device.getGraphicsQueues()[0];
-    VkCommandPool commandPool = device.getCommandPool(queue);
+        device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-    device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-    device.copyBuffer(stagingBuffer, indexBuffer, bufferSize, commandPool, queue.queue);
+        void* data;
+        device.mapMemory(stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, indices.data(), (size_t) bufferSize);
+        device.unmapMemory(stagingBufferMemory);
 
-    device.destroyBuffer(stagingBuffer, nullptr);
-    device.freeMemory(stagingBufferMemory, nullptr);
+        Queue queue = device.getGraphicsQueues()[0];
+        VkCommandPool commandPool = device.getCommandPool(queue);
+
+        device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffers[i], indexBufferMemories[i]);
+        device.copyBuffer(stagingBuffer, indexBuffers[i], bufferSize, commandPool, queue.queue);
+
+        device.destroyBuffer(stagingBuffer, nullptr);
+        device.freeMemory(stagingBufferMemory, nullptr);
+    }
 }
 
 void Window::createCommandBuffers()
@@ -699,7 +720,19 @@ void Window::createCommandBuffers()
 
     for (size_t i = 0; i < commandBuffers.size(); i++)
     {
-        auto indices = Rect::getIndices();
+        std::vector<std::vector<uint16_t>> indices;
+        for (size_t j = 0; j < shapes.size(); j++)
+        {
+            switch(shapes[j]->getType())
+            {
+                case SHAPE_TYPE_RECT:
+                    indices.push_back(Rect::getIndices());
+                    break;
+                default:
+                    indices.push_back({});
+                    break;
+            }
+        }
 
         VkCommandBufferBeginInfo commandBufferBeginInfo = {};
         commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -725,13 +758,12 @@ void Window::createCommandBuffers()
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
-        vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
         VkDeviceSize offsets[] = {0};
-        for (VkBuffer buffer : vertexBuffers)
+        for (size_t j = 0; j < shapes.size(); j++)
         {
-            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &buffer, offsets);
-            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffers[j], 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[j], offsets);
+            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices[j].size()), 1, 0, 0, 0);
         }
 
         vkCmdEndRenderPass(commandBuffers[i]);
