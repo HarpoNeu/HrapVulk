@@ -30,16 +30,6 @@ struct GraphicsPipeline
     std::vector<VkShaderModule> shaderModules;
 };
 
-struct Vertex
-{
-    glm::vec2 pos;
-    glm::vec3 color;
-
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
-    bool operator==(const Vertex& other) const;
-};
-
 class Window
 {
 public:
@@ -134,13 +124,15 @@ private:
     VkBuffer vertexBuffer, indexBuffer;
     VkDeviceMemory vertexBufferMemory, indexBufferMemory;
 
-    int width, height;
+    Dimensions dimensions;
     char* title;
 
     bool launched;
     bool shown;
 
     size_t currentFrame;
+
+    Rect rect;
 
     void createSwapchain();
     void createRenderPass();

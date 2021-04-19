@@ -38,3 +38,17 @@ std::vector<char> readFile(const std::string& fileName)
 
     return buffer;
 }
+
+float convertPxToFl(int px, int dim)
+{
+    float fPx = (float) px;
+    float fDim = (float) dim;
+
+    return (fPx / (fDim / 2)) - 1;
+}
+
+float convertColor(int c)
+{
+    float fC = (float) c;
+    return fC / 255;
+}

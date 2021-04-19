@@ -10,82 +10,14 @@
 
 #include <unistd.h>
 
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0
-};
-
 const int MAX_FRAMES_IN_FLIGHT = 2;
-
-float convertPxToFl(int px, int dim)
-{
-    float fPx = (float) px;
-    float fDim = (float) dim;
-
-    return (fPx / (fDim / 2)) - 1;
-}
-
-float convertColor(int c)
-{
-    float fC = (float) c;
-    return fC / 255;
-}
-
-std::vector<Vertex> calculateVertices(Rect rect)
-{
-
-    float w = convertPxToFl(rect.width, 800) + 1;
-    float h = convertPxToFl(rect.height, 800) + 1;
-    float x = convertPxToFl(rect.offset.x, 800);
-    float y = convertPxToFl(rect.offset.y, 800);
-    float r = convertColor(rect.color.r);
-    float g = convertColor(rect.color.g);
-    float b = convertColor(rect.color.b);
-    float a = convertColor(rect.color.a);
-
-    std::vector<Vertex> vertices;
-    vertices.push_back({{x, y}, {r, g, b}});
-    vertices.push_back({{x + w, y}, {r, g, b}});
-    vertices.push_back({{x + w, y + h}, {r, g, b}});
-    vertices.push_back({{x, y + h}, {r, g, b}});
-
-    return vertices;
-}
-
-VkVertexInputBindingDescription Vertex::getBindingDescription()
-{
-    VkVertexInputBindingDescription bindingDescription = {};
-    bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    return bindingDescription;
-}
-
-std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescriptions()
-{
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, pos);
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
-    return attributeDescriptions;
-}
-
-bool Vertex::operator==(const Vertex& other) const
-{
-    return pos == other.pos && color == other.color;
-}
 
 Window::Window()
 {
     window = nullptr;
 
-    width = 100;
-    height = 100;
+    dimensions.w = 100;
+    dimensions.h = 100;
     title = "Application";
     
     currentFrame = 0;
@@ -101,32 +33,32 @@ Window::~Window()
 
 void Window::setWidth(int width)
 {
-    this->width = width;
+    this->dimensions.w = width;
 
     if (window != nullptr)
     {
-        glfwSetWindowSize(window, this->width, this->height);
+        glfwSetWindowSize(window, this->dimensions.w, this->dimensions.h);
     }
 }
 
 void Window::setHeight(int height)
 {
-    this->height = height;
+    this->dimensions.h = height;
 
     if (window != nullptr)
     {
-        glfwSetWindowSize(window, this->width, this->height);
+        glfwSetWindowSize(window, this->dimensions.w, this->dimensions.h);
     }
 }
 
 void Window::setSize(int width, int height)
 {
-    this->width = width;
-    this->height = height;
+    this->dimensions.w = width;
+    this->dimensions.h = height;
 
     if (window != nullptr)
     {
-        glfwSetWindowSize(window, this->width, this->height);
+        glfwSetWindowSize(window, this->dimensions.w, this->dimensions.h);
     }
 }
 
@@ -163,7 +95,7 @@ void Window::launch(std::vector<Device>& devices)
     {
         launched = true;
 
-        window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+        window = glfwCreateWindow(dimensions.w, dimensions.h, title, nullptr, nullptr);
         if (glfwCreateWindowSurface(getInstance(), window, nullptr, &surface) != VK_SUCCESS)
         {
             throw std::runtime_error("Error! Failed to create window surface!");
@@ -669,22 +601,14 @@ void Window::createFramebuffers()
 
 void Window::createVertexBuffer()
 {
-    Rect rect;
-    rect.offset.x = width / 4;
-    rect.offset.y = height / 4;
-    rect.width = width / 2;
-    rect.height = height / 2;
-    rect.color.r = 255;
-    rect.color.g = 0;
-    rect.color.b = 0;
-    rect.color.a = 255;
+    rect.dimensions.w = dimensions.w / 2;
+    rect.dimensions.h = dimensions.h / 2;
+    rect.offset.x = dimensions.w / 4;
+    rect.offset.y = dimensions.h / 4;
 
-    auto vertices = calculateVertices(rect);
+    rect.color = {255, 0, 0, 1};
 
-    for (Vertex vertex : vertices)
-    {
-        std::cout << vertex.pos.x << ", " << vertex.pos.y << " - " << vertex.color.r << ", " << vertex.color.b << ", " << vertex.color.g << std::endl;
-    }
+    auto vertices = rect.getVertices(dimensions);
 
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -710,6 +634,8 @@ void Window::createVertexBuffer()
 
 void Window::createIndexBuffer()
 {
+    auto indices = Rect::getIndices();
+
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     VkBuffer stagingBuffer;
@@ -752,6 +678,8 @@ void Window::createCommandBuffers()
 
     for (size_t i = 0; i < commandBuffers.size(); i++)
     {
+        auto indices = Rect::getIndices();
+
         VkCommandBufferBeginInfo commandBufferBeginInfo = {};
         commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         commandBufferBeginInfo.flags = 0;
