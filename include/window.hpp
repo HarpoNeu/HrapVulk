@@ -121,8 +121,11 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
 
-    VkBuffer vertexBuffer, indexBuffer;
-    VkDeviceMemory vertexBufferMemory, indexBufferMemory;
+    std::vector<VkBuffer> vertexBuffers;
+    std::vector<VkDeviceMemory> vertexBufferMemories;
+
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
 
     Dimensions dimensions;
     char* title;
@@ -132,7 +135,7 @@ private:
 
     size_t currentFrame;
 
-    Rect rect;
+    std::vector<Rect> rects;
 
     void createSwapchain();
     void createRenderPass();

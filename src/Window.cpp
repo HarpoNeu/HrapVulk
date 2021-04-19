@@ -220,10 +220,16 @@ void Window::destroy()
 
     destroySwapchain();
 
-    device.freeMemory(vertexBufferMemory, nullptr);
+    for (VkDeviceMemory memory : vertexBufferMemories)
+    {
+        device.freeMemory(memory, nullptr);
+    }
     device.freeMemory(indexBufferMemory, nullptr);
 
-    device.destroyBuffer(vertexBuffer, nullptr);
+    for (VkBuffer buffer : vertexBuffers)
+    {
+        device.destroyBuffer(buffer, nullptr);
+    }
     device.destroyBuffer(indexBuffer, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -601,35 +607,50 @@ void Window::createFramebuffers()
 
 void Window::createVertexBuffer()
 {
-    rect.dimensions.w = dimensions.w / 2;
-    rect.dimensions.h = dimensions.h / 2;
-    rect.offset.x = dimensions.w / 4;
-    rect.offset.y = dimensions.h / 4;
+    rects.resize(2);
 
-    rect.color = {255, 0, 0, 1};
+    rects[0].dimensions.w = dimensions.w / 6;
+    rects[0].dimensions.h = dimensions.h / 6;
+    rects[0].offset.x = dimensions.w / 4;
+    rects[0].offset.y = dimensions.h / 4;
 
-    auto vertices = rect.getVertices(dimensions);
+    rects[0].color = {255, 0, 0, 1};
 
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    rects[1].dimensions.w = dimensions.w / 6;
+    rects[1].dimensions.h = dimensions.h / 6;
+    rects[1].offset.x = (dimensions.w / 4) * 3;
+    rects[1].offset.y = (dimensions.h / 4) * 3;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    rects[1].color = {0, 0, 255, 1};
 
-    device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    vertexBuffers.resize(rects.size());
+    vertexBufferMemories.resize(rects.size());
 
-    void* data;
-    device.mapMemory(stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferSize);
-    device.unmapMemory(stagingBufferMemory);
+    for (size_t i = 0; i < rects.size(); i++)
+    {
+        auto vertices = rects[i].getVertices(dimensions);
 
-    Queue queue = device.getGraphicsQueues()[0];
-    VkCommandPool commandPool = device.getCommandPool(queue);
+        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-    device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-    device.copyBuffer(stagingBuffer, vertexBuffer, bufferSize, commandPool, queue.queue);
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
 
-    device.destroyBuffer(stagingBuffer, nullptr);
-    device.freeMemory(stagingBufferMemory, nullptr);
+        device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+        void* data;
+        device.mapMemory(stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, vertices.data(), (size_t) bufferSize);
+        device.unmapMemory(stagingBufferMemory);
+
+        Queue queue = device.getGraphicsQueues()[0];
+        VkCommandPool commandPool = device.getCommandPool(queue);
+
+        device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffers[i], vertexBufferMemories[i]);
+        device.copyBuffer(stagingBuffer, vertexBuffers[i], bufferSize, commandPool, queue.queue);
+
+        device.destroyBuffer(stagingBuffer, nullptr);
+        device.freeMemory(stagingBufferMemory, nullptr);
+    }
 }
 
 void Window::createIndexBuffer()
@@ -704,13 +725,15 @@ void Window::createCommandBuffers()
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
-        VkBuffer vertexBuffers[] = {vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-
         vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-        vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        VkDeviceSize offsets[] = {0};
+        for (VkBuffer buffer : vertexBuffers)
+        {
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &buffer, offsets);
+            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        }
+
         vkCmdEndRenderPass(commandBuffers[i]);
 
         if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
