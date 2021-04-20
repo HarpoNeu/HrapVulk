@@ -362,6 +362,16 @@ VkResult Device::createCommandPool(VkCommandPoolCreateInfo* pCreateInfo, VkAlloc
     return vkCreateCommandPool(device, pCreateInfo, pAllocator, pPool);
 }
 
+VkResult Device::createDescriptorPool(VkDescriptorPoolCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkDescriptorPool* pPool)
+{
+    return vkCreateDescriptorPool(device, pCreateInfo, nullptr, pPool);
+}
+
+VkResult Device::createDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkDescriptorSetLayout* pLayout)
+{
+    return vkCreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pLayout);
+}
+
 VkResult Device::createFence(VkFenceCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkFence* pFence)
 {
     return vkCreateFence(device, pCreateInfo, pAllocator, pFence);
@@ -432,6 +442,16 @@ void Device::freeCommandBuffers(VkCommandPool pool, uint32_t bufferCount, VkComm
     vkFreeCommandBuffers(device, pool, bufferCount, pBuffers);
 }
 
+VkResult Device::allocateDescriptorSets(VkDescriptorSetAllocateInfo* pAllocInfo, VkDescriptorSet* pSets)
+{
+    return vkAllocateDescriptorSets(device, pAllocInfo, pSets);
+}
+
+void Device::updateDescriptorSets(uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pWriteSets, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pCopySets)
+{
+    vkUpdateDescriptorSets(device, descriptorWriteCount, pWriteSets, descriptorCopyCount, pCopySets);
+}
+
 void Device::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool pool, VkQueue queue)
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(pool);
@@ -453,6 +473,16 @@ void Device::destroyBuffer(VkBuffer buffer, VkAllocationCallbacks* pAllocator)
 void Device::destroyCommandPool(VkCommandPool pool, VkAllocationCallbacks* pAllocator)
 {
     vkDestroyCommandPool(device, pool, pAllocator);
+}
+
+void Device::destroyDescriptorPool(VkDescriptorPool pool, VkAllocationCallbacks* pAllocator)
+{
+    vkDestroyDescriptorPool(device, pool, pAllocator);
+}
+
+void Device::destroyDescriptorSetLayout(VkDescriptorSetLayout layout, VkAllocationCallbacks* pAllocator)
+{
+    vkDestroyDescriptorSetLayout(device, layout, nullptr);
 }
 
 void Device::destroyFence(VkFence fence, VkAllocationCallbacks* pAllocator)

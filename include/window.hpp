@@ -129,6 +129,13 @@ private:
     std::vector<VkBuffer> indexBuffers;
     std::vector<VkDeviceMemory> indexBufferMemories;
 
+    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkDeviceMemory> uniformBufferMemories;
+
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool descriptorPool;
+    std::vector<VkDescriptorSet> descriptorSets;
+
     Dimensions dimensions;
     char* title;
 
@@ -141,10 +148,14 @@ private:
 
     void createSwapchain();
     void createRenderPass();
+    void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createFramebuffers();
-    void createVertexBuffer();
-    void createIndexBuffer();
+    void createVertexBuffers();
+    void createIndexBuffers();
+    void createUniformBuffers();
+    void createDescriptorPool();
+    void createDescriptorSets();
     void createCommandBuffers();
     void createSyncObjects();
     void destroySwapchain();

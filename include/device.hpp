@@ -38,6 +38,8 @@ public:
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
     VkResult createBuffer(VkBufferCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer);
     VkResult createCommandPool(VkCommandPoolCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkCommandPool* pPool);
+    VkResult createDescriptorPool(VkDescriptorPoolCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkDescriptorPool* pPool);
+    VkResult createDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkDescriptorSetLayout* pLayout);
     VkResult createFence(VkFenceCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkFence* pFence);
     VkResult createFramebuffer(VkFramebufferCreateInfo* pCreateInfo, VkAllocationCallbacks* pAllocator, VkFramebuffer* pFramebuffer);
     VkResult createGraphicsPipelines(VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines);
@@ -55,10 +57,15 @@ public:
     VkResult allocateCommandBuffers(VkCommandBufferAllocateInfo* pAllocInfo, VkCommandBuffer* pBuffers);
     void freeCommandBuffers(VkCommandPool pool, uint32_t bufferCount, VkCommandBuffer* pBuffers);
 
+    VkResult allocateDescriptorSets(VkDescriptorSetAllocateInfo* pAllocInfo, VkDescriptorSet* pSets);
+    void updateDescriptorSets(uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pWriteSets, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pCopySets);
+
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool pool, VkQueue queue);
 
     void destroyBuffer(VkBuffer buffer, VkAllocationCallbacks* pAllocator);
     void destroyCommandPool(VkCommandPool pool, VkAllocationCallbacks* pAllocator);
+    void destroyDescriptorPool(VkDescriptorPool pool, VkAllocationCallbacks* pAllocator);
+    void destroyDescriptorSetLayout(VkDescriptorSetLayout layout, VkAllocationCallbacks* pAllocator);
     void destroyFence(VkFence fence, VkAllocationCallbacks* pAllocator);
     void destroyFramebuffer(VkFramebuffer framebuffer, VkAllocationCallbacks* pAllocator);
     void destroyImageView(VkImageView view, VkAllocationCallbacks* pAllocator);
