@@ -1,3 +1,5 @@
+// TODO: fix whatever the fuck is only allowing me to draw 3 shapes
+
 #include <hvulk.hpp>
 
 #include <iostream>
@@ -22,16 +24,20 @@ protected:
 
         Offset o1 = {100, 100};
         Offset o2 = {500, 500};
-
-        Color c = {255, 0, 0, 255};
+        Offset o3 = {100, 500};
+        Offset o4 = {500, 100};
 
         Dimensions d = {200, 200};
 
-        Rect r(o1, d, c);
-        Rect r2(o2, d, c);
+        Rect r(o1, d, Color::red());
+        Rect r2(o2, d, Color::green());
+        Rect r3(o3, d, Color::blue());
+        Rect r4(o4, d, Color::white());
 
         primaryWindow.addShape(&r);
         primaryWindow.addShape(&r2);
+        primaryWindow.addShape(&r3);
+        primaryWindow.addShape(&r4);
     }
 
 private:

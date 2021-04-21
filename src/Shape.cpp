@@ -15,7 +15,7 @@ Shape::Shape(Offset offset)
     color = {0, 0, 0, 0};
 }
 
-Shape::Shape(Color color)
+Shape::Shape(basic_color color)
 {
     offset = {0, 0};
     this->color = color;
@@ -47,7 +47,7 @@ Rect::Rect(Offset offset, Dimensions dimensions)
     color = {0, 0, 0, 0};
 }
 
-Rect::Rect(Offset offset, Dimensions dimensions, Color color)
+Rect::Rect(Offset offset, Dimensions dimensions, basic_color color)
 {
     type = SHAPE_TYPE_RECT;
     this->offset = offset;
@@ -68,7 +68,7 @@ std::vector<Vertex> Rect::getVertices(Rect* rect, Dimensions dim)
     float y = convertPxToFl(rect->offset.y, dim.h);
 
     float r = convertColor(rect->color.r);
-    float g = convertColor(rect->color.b);
+    float g = convertColor(rect->color.g);
     float b = convertColor(rect->color.b);
     float a = convertColor(rect->color.a);
 

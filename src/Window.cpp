@@ -673,6 +673,7 @@ void Window::createVertexBuffers()
         {
             case SHAPE_TYPE_RECT:
                 vertices = Rect::getVertices(static_cast<Rect*>(shapes[i]), dimensions);
+                std::cout << vertices[0].color.r << ", " << vertices[0].color.g << ", " << vertices[0].color.b << std::endl;
                 break;
             default:
                 vertices = {};

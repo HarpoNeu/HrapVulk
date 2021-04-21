@@ -26,7 +26,7 @@ public:
 
     Shape();
     Shape(Offset offset);
-    Shape(Color color);
+    Shape(basic_color color);
     ~Shape();
 
     Shape_Type getType();
@@ -35,7 +35,7 @@ protected:
 
     Shape_Type type;
     Offset offset;
-    Color color;
+    basic_color color;
 
 private:
 
@@ -47,7 +47,7 @@ public:
 
     Rect();
     Rect(Offset offset, Dimensions dimensions);
-    Rect(Offset offset, Dimensions dimensions, Color color);
+    Rect(Offset offset, Dimensions dimensions, basic_color color);
     ~Rect();
 
     static std::vector<Vertex> getVertices(Rect* rect, Dimensions dim);

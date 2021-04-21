@@ -50,5 +50,6 @@ float convertPxToFl(int px, int dim)
 float convertColor(int c)
 {
     float fC = (float) c;
+    if (fC > 255) fC = 255;
     return fC / 255;
 }
