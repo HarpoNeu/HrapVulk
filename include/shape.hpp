@@ -50,7 +50,7 @@ public:
     Rect(Offset offset, Dimensions dimensions, basic_color color);
     ~Rect();
 
-    static std::vector<Vertex> getVertices(Rect* rect, Dimensions dim);
+    static std::vector<Vertex> getVertices(Rect rect, Dimensions dim);
     static std::vector<uint16_t> getIndices();
 
 private:

@@ -28,16 +28,17 @@ protected:
         Offset o4 = {500, 100};
 
         Dimensions d = {200, 200};
+        Dimensions max = {WIDTH, HEIGHT};
 
         Rect r(o1, d, Color::red());
         Rect r2(o2, d, Color::green());
         Rect r3(o3, d, Color::blue());
         Rect r4(o4, d, Color::white());
 
-        primaryWindow.addShape(&r);
-        primaryWindow.addShape(&r2);
-        primaryWindow.addShape(&r3);
-        primaryWindow.addShape(&r4);
+        primaryWindow.addShape(r);
+        primaryWindow.addShape(r2);
+        primaryWindow.addShape(r3);
+        primaryWindow.addShape(r4);
     }
 
 private:

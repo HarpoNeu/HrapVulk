@@ -1,6 +1,7 @@
 #include <shape.hpp>
 #include <utils.hpp>
 
+#include <iostream>
 #include <vector>
 
 Shape::Shape()
@@ -60,17 +61,19 @@ Rect::~Rect()
 
 }
 
-std::vector<Vertex> Rect::getVertices(Rect* rect, Dimensions dim)
+std::vector<Vertex> Rect::getVertices(Rect rect, Dimensions dim)
 {
-    float w = convertPxToFl(rect->dimensions.w, dim.w) + 1;
-    float h = convertPxToFl(rect->dimensions.h, dim.h) + 1;
-    float x = convertPxToFl(rect->offset.x, dim.w);
-    float y = convertPxToFl(rect->offset.y, dim.h);
+    float w = convertPxToFl(rect.dimensions.w, dim.w) + 1;
+    float h = convertPxToFl(rect.dimensions.h, dim.h) + 1;
+    float x = convertPxToFl(rect.offset.x, dim.w);
+    float y = convertPxToFl(rect.offset.y, dim.h);
 
-    float r = convertColor(rect->color.r);
-    float g = convertColor(rect->color.g);
-    float b = convertColor(rect->color.b);
-    float a = convertColor(rect->color.a);
+    float r = convertColor(rect.color.r);
+    float g = convertColor(rect.color.g);
+    float b = convertColor(rect.color.b);
+    float a = convertColor(rect.color.a);
+
+    std::cout << rect.color.r << ", " << r << " : " << rect.color.g << ", " << g << " : " << rect.color.b << ", " << b << std::endl;;
 
     std::vector<Vertex> vertices;
     vertices.push_back({{x, y}, {r, g, b}});

@@ -95,7 +95,7 @@ public:
      */
     void destroy();
 
-    void addShape(Shape* shape);
+    void addShape(Rect& shape);
 
     /*! @brief Returns whether the specified window should close.
      *
@@ -123,11 +123,11 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
 
-    std::vector<VkBuffer> vertexBuffers;
-    std::vector<VkDeviceMemory> vertexBufferMemories;
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
 
-    std::vector<VkBuffer> indexBuffers;
-    std::vector<VkDeviceMemory> indexBufferMemories;
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
 
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBufferMemories;
@@ -144,7 +144,7 @@ private:
 
     size_t currentFrame;
 
-    std::vector<Shape*> shapes;
+    std::vector<Rect> shapes;
 
     void createSwapchain();
     void createRenderPass();
